@@ -1,0 +1,233 @@
+---
+title: "final"
+output: html_document
+date: "2022-12-02"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+#Loading the file
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+HMO <- read_csv("https://intro-datascience.s3.us-east-2.amazonaws.com/HMO_data.csv")
+```
+
+#Checking the structure of the table
+```{r}
+head(HMO)
+tail(HMO)
+str(HMO)
+summary(HMO)
+```
+#Finding and removing the null values
+
+```{r}
+library(imputeTS)
+sum(is.na(HMO))
+HMO <- HMO[!is.na(HMO$hypertension),]
+HMO$bmi <- na.interpolation(HMO$bmi)
+```
+
+#Changing the character values to factors
+```{r}
+HMO$smoker = as.factor(HMO$smoker)
+HMO$location_type = as.factor(HMO$location_type)
+HMO$education_level = as.factor(HMO$education_level)
+HMO$yearly_physical = as.factor(HMO$yearly_physical)
+HMO$exercise = as.factor(HMO$exercise)
+HMO$married = as.factor(HMO$married)
+HMO$gender = as.factor(HMO$gender)
+str(HMO)
+```
+
+
+#Calculating the quantile cost and dividing the cost as expensive and non-expensive 
+```{r}
+quantile(HMO$cost, probs = 0.78)
+HMO$expensive <- ifelse(HMO$cost > quantile(HMO$cost, probs = 0.78),'yes','no')
+HMO$expensive = as.factor(HMO$expensive)
+```
+#Making category for age
+
+```{r}
+HMO$Age_Group <- ifelse(HMO$age < 25, "Youth", NA)
+HMO$Age_Group <- ifelse(HMO$age >= 25 & HMO$age < 35, "Young Adults", HMO$Age_Group)
+HMO$Age_Group <- ifelse(HMO$age >= 35 & HMO$age < 50, "Middle Aged Adults", HMO$Age_Group)
+HMO$Age_Group <- ifelse(HMO$age >= 50 & HMO$age < 64, "Old Aged Adults", HMO$Age_Group)
+HMO$Age_Group <- ifelse(HMO$age >= 64, "Seniors", HMO$Age_Group)
+HMO$Age_Group = as.factor(HMO$Age_Group)
+```
+
+
+#Graphs comparing age
+
+```{r}
+
+p1age <-ggplot(HMO,aes(x=age))+geom_histogram(bins=10, col="black")+ggtitle('age column distribution')
+p1age
+
+
+HMO %>% group_by(Age_Group) %>% summarize(age= mean(age), cost = mean(cost)) %>% ggplot(aes(x=Age_Group, y= cost, fill=Age_Group)) + geom_col(alpha =0.7)                                                                                                               
+
+HMO %>% filter(Age_Group == "Youth" | Age_Group == "Young Adults" | Age_Group == "Middle Aged Adults"  | Age_Group == "Old Aged Adults" | Age_Group == "Seniors") %>% ggplot(aes(Age_Group, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="Age Group vs Expensive")
+```
+#Graphs exploring dempographics - Children
+
+```{r}
+
+p1c <-ggplot(HMO,aes(x=children))+geom_histogram(bins=11)+ggtitle('number of children column distribution')
+p1c
+HMO %>% group_by(children) %>% summarize(age= mean(age), cost = mean(cost)) %>% ggplot(aes(x=children, y= cost, fill=children)) + geom_col() 
+
+
+```
+#Graphs exploring dempographics - location
+
+```{r}
+ggplot(HMO, aes(x = location)) +geom_bar(fill=c('grey','grey','red','grey','grey','green','grey'))
+
+HMO %>% group_by(location) %>% summarize(age= mean(age), cost = mean(cost)) %>% ggplot(aes(x=location, y= cost, fill=location)) + geom_col(alpha = 0.7) 
+
+```
+#Graphs exploring dempographics - Education_Level
+
+```{r}
+
+ggplot(HMO, aes(x = education_level, fill= education_level)) +geom_bar(alpha = 0.7)
+
+
+HMO %>% group_by(education_level) %>% summarize( cost = mean(cost)) %>% ggplot(aes(x=education_level, y= cost, fill= education_level)) + geom_col(alpha = 0.7) 
+```
+#Graphs exploring dempographics - Yearly-Physical
+
+```{r}
+
+ggplot(HMO, aes(x = yearly_physical,fill = yearly_physical )) +geom_bar(alpha = 0.5)
+
+HMO %>% group_by(yearly_physical) %>% summarize(cost = mean(cost)) %>% ggplot(aes(x=yearly_physical, y= cost, fill= yearly_physical)) + geom_col(alpha =0.5) 
+```
+#Graphs exploring dempographics - Marraige
+
+```{r}
+
+ggplot(HMO, aes(x = married,fill = married )) +geom_bar(alpha = 0.5)
+
+HMO %>% group_by(married) %>% summarize(cost = mean(cost)) %>% ggplot(aes(x=married, y= cost, fill= married)) + geom_col(alpha = 0.5) 
+```
+#Graphs exploring dempographics - Gender
+
+```{r}
+
+ggplot(HMO, aes(x = gender,fill = gender )) +geom_bar(alpha = 0.5)
+
+HMO %>% group_by(gender) %>% summarize(cost = mean(cost)) %>% ggplot(aes(x=gender, y= cost, fill= gender)) + geom_col(alpha = 0.5) 
+```
+
+#Graph with the bmi
+```{r}
+p1bmi <-ggplot(HMO,aes(x=bmi))+geom_histogram(bins=10)+ggtitle('BMI distribution')
+p1bmi
+
+p2bmi <- ggplot(HMO,aes(x=expensive,y=bmi))+geom_boxplot(fill='yellow')+ggtitle('BMI vs Expense')
+p2bmi
+
+```
+#Graph for demographics - Location Type 
+
+```{r}
+ggplot(HMO, aes(x = location_type ,fill = location_type )) +geom_bar(alpha = 0.5)
+
+HMO %>% filter(location_type == "Urban" | location_type == "Country") %>% ggplot(aes(location_type, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="Count of location type vs expensive")
+```
+
+
+
+
+
+#Graph for smoker
+```{r}
+p1smoker<-ggplot(HMO,aes(x=smoker, fill=smoker)) +geom_bar(alpha = 0.5)
+p1smoker
+HMO %>% filter(smoker == "no" | smoker == "yes") %>% ggplot(aes(smoker, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="Smoker vs Expensive")
+
+p1smoker <- ggplot(HMO,aes(x=smoker,y=cost))+geom_boxplot(fill='purple')+ggtitle('Smoker vs Cost')
+p1smoker
+```
+
+
+#Graph of exercise
+```{r}
+HMO %>% filter(exercise == "Active" | exercise == "Not-Active") %>% ggplot(aes(exercise, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="Exercise vs expensive")
+
+p1exercise <- ggplot(HMO,aes(x=exercise,y=cost))+geom_boxplot(fill='orange', alpha =0.7)+ggtitle('Exercise vs Cost')
+p1exercise
+```
+
+# Graph of children and expensive 
+
+```{r}
+HMO %>% filter(children == "1" | children == "2" | children == "3" | children == "4"| children == "5") %>% ggplot(aes(children, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="Children vs Expensive")
+
+
+```
+# Graph of gender and expensive 
+
+```{r}
+HMO %>% filter(gender == "female" | gender == "male") %>% ggplot(aes(gender, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="Gender vs Expensive")
+
+p1gender <- ggplot(HMO,aes(x=gender,y=cost))+geom_boxplot(fill='blue', alpha =0.7)+ggtitle('Gender vs Expense')
+p1gender
+```
+
+# Graph of location and expensive 
+
+```{r}
+HMO %>% group_by(location) %>% ggplot(aes(location, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="Location vs Expensive")
+```
+# Graph of yearly-physical and expensive 
+
+```{r}
+HMO %>% group_by(yearly_physical) %>% ggplot(aes(yearly_physical, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="yearly_physcial vs expensive")
+```
+
+
+#Graph of demographics - Hypertension
+
+```{r}
+HMO %>% group_by(hypertension) %>% ggplot(aes(hypertension, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title= " hypertension vs expensive") 
+
+```
+
+
+# Graph of education level and expensive 
+
+```{r}
+HMO %>% group_by(education_level) %>% ggplot(aes(education_level, fill = expensive)) +geom_bar(position = "dodge", alpha = 0.5)  + labs(title="education_level vs expensive")
+```
+
+
+#Map for location
+
+```{r}
+HMO_map <- HMO %>% group_by(location) %>% summarise(mean(cost))
+
+us <- map_data("state")
+us$state_name <- tolower(us$region)
+coord_HMO <- data.frame(loc=tolower(HMO_map$location),avg_cost=HMO_map$`mean(cost)`)
+us_coords <- merge(us,coord_HMO, by.x='state_name',by.y='loc',all.x=TRUE )
+us_coords <- us_coords %>% arrange(order)
+
+map <- ggplot(us_coords,aes(map_id= region)) + geom_polygon(color="black",aes(x=long,y=lat,group=group,fill=avg_cost))  +
+expand_limits(x=us_coords$long, y=us_coords$lat)+coord_map("mercator")
+map
+```
+
